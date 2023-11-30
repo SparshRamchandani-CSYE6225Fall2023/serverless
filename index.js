@@ -96,7 +96,7 @@ exports.handler = async function handler(event) {
       `
       // \n Signed URL: ${bucketURL}
     );
-    await recordEmailEvent("success");
+    await recordEmailEvent(`Download was successfull: Email sent to ${receiversEmail}`);
   } catch (error) {
     console.error("Error:", error);
     await sendEmail(
@@ -104,7 +104,7 @@ exports.handler = async function handler(event) {
       "Download failed",
       `Error occurred: ${error.message}`
     );
-    await recordEmailEvent("failure");
+    await recordEmailEvent(`Download was failed: Email sent to ${receiversEmail}`);
   }
 };
 
