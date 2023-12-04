@@ -1,40 +1,40 @@
-# Lambda Function for GitHub Release Download and Email Notification
+# Download & Notify: A Lambda Function for GitHub Releases
 
-## Overview
-This Lambda function is designed to be triggered by an SNS notification. Its main tasks include downloading a release from a GitHub repository, storing it in a Google Cloud Storage Bucket, sending an email to the user with the download status, and tracking sent emails in DynamoDB.
+## Overview:
+
+This Lambda function automates downloading GitHub releases, storing them in Google Cloud Storage, and notifying users via email. It triggers on an SNS notification and utilizes DynamoDB for tracking sent emails.
+
+## Key Features:
+
+- Automated download: Seamlessly retrieves releases from GitHub repositories.
+- Cloud storage: Securely stores releases in a Google Cloud Storage Bucket.
+- Email notification: Informs users about download status through customizable emails sent by Amazon SES.
+- Tracking & monitoring: Keeps track of sent emails in a DynamoDB table and logs execution details in CloudWatch Logs.
 
 ## Prerequisites
-Ensure the following requirements are met before deploying the Lambda function:
 
-AWS Lambda: Set up an AWS Lambda function and an SNS topic for triggering the Lambda function.
+- AWS Lambda: Function and SNS topic for triggering.
+- GitHub Token: Read access to repository releases.
+- Google Cloud Storage Bucket: Target storage location for downloaded releases.
+- AWS DynamoDB Table: Tracks sent email information.
+- Amazon SES: Configured for sending email notifications.
 
-GitHub Token: Generate a GitHub token with read access to the repository releases.
+## Getting Started:
 
-Google Cloud Storage Bucket: Create a Google Cloud Storage Bucket to store downloaded releases.
+1. Clone: Download this repository to your local machine.
+2. Navigate: Go to the Lambda function directory.
+3. Install Dependencies: Use the provided method to install required libraries.
+4. Configure: Edit the config.js file with your settings.
+5. Deploy: Utilize your preferred method to deploy the function to AWS.
 
-AWS DynamoDB Table: Set up an AWS DynamoDB table to track sent emails.
+## Function Flow:
+1. Triggered by SNS: The function kicks off on receiving an SNS notification.
+2. Download Release: Utilizes the provided GitHub token to download the specified release.
+3. Store in Cloud Storage: Saves the downloaded release securely in your configured Google Cloud Storage Bucket.
+4. Email Notification: Sends a customizable email to the user informing them about the download status. (Ensure SES is configured!)
+5. Track in DynamoDB: Logs the sent email details in the designated DynamoDB table for future reference.
 
-Amazon SES: Configure Amazon Simple Email Service (SES) for sending emails.
-
-## Deployment Steps
-Clone this repository to your local machine.
-
-Navigate to the Lambda function directory.
-
-Install the required dependencies.
-
-Edit the config.js file with your configuration settings.
-
-Deploy the Lambda function to AWS using your preferred deployment method.
-
-## Usage
-Once deployed, the Lambda function is triggered by SNS notifications. It performs the following tasks:
-
-Download GitHub Release: Uses the GitHub token to download the specified release and stores it in the configured Google Cloud Storage Bucket.
-
-Email Notification: Sends an email to the user with the download status. Ensure SES is correctly configured for sending emails.
-
-Tracking in DynamoDB: Records sent emails in the specified DynamoDB table for tracking purposes.
-
-## Monitoring
-Monitor the Lambda function's execution logs in AWS CloudWatch Logs. Additionally, check the DynamoDB table for tracking email status.
+## Monitoring & Feedback:
+- CloudWatch Logs: Monitor function execution details and troubleshoot any issues.
+- DynamoDB Table: Track email delivery status and identify any potential failures.
+- Feedback: Feel free to raise issues or suggest improvements for further development.
