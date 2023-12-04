@@ -38,7 +38,10 @@ console.log("GCP_SERVICE_ACCOUNT_KEY", process.env.GCP_PRIVATE_KEY);
 console.log("GCS_BUCKET_NAME", process.env.GCS_BUCKET_NAME);
 console.log("DYNAMODB_TABLE_NAME", process.env.DYNAMODB_TABLE_NAME);
 
+
+
 exports.handler = async function handler(event) {
+  let processed = false;
   try {
     const s = await getSecret();
     const secretValue = await JSON.parse(s);
@@ -72,31 +75,38 @@ exports.handler = async function handler(event) {
     console.log("USER_ID:", userId);
 
     const response = await fetch(releaseUrl);
-    if (!response.ok)
-      throw new Error(`Failed to download Submission : ${response.statusText}`);
+    if (!processed) {
+      processed = true;
+      if (!response.ok)
+        throw new Error(
+          `Failed to download Submission : ${response.statusText}`
+        );
 
-    const releaseData = await response.buffer();
-    const bucketName = process.env.GCS_BUCKET_NAME;
-    const fileName = `${userId}/${assignmentId}/file${Date.now().toString()}.zip`;
-    const filepath = `${bucketName}/${fileName}`;
-    await storage.bucket(bucketName).file(fileName).save(releaseData);
+      const releaseData = await response.buffer();
+      const bucketName = process.env.GCS_BUCKET_NAME;
+      const fileName = `${userId}/${assignmentId}/file${Date.now().toString()}.zip`;
+      const filepath = `${bucketName}/${fileName}`;
+      await storage.bucket(bucketName).file(fileName).save(releaseData);
 
-    const options = {
-      version: "v4",
-      action: "read",
-      expires: Date.now() + 30 * 60 * 1000,
-    };
+      const options = {
+        version: "v4",
+        action: "read",
+        expires: Date.now() + 30 * 60 * 1000,
+      };
 
-    const bucketURL = await generateBucket(fileName, options, storage);
-    console.log("BUCKET URL", bucketURL);
+      const bucketURL = await generateBucket(fileName, options, storage);
+      console.log("BUCKET URL", bucketURL);
 
-    await sendEmail(
-      receiversEmail,
-      "Download successful",
-      `The release was successfully downloaded and uploaded to ${bucketName} \n File Path on Google Cloud: ${filepath}`
-    );
+      await sendEmail(
+        receiversEmail,
+        "Download successful",
+        `The release was successfully downloaded and uploaded to ${bucketName} \n File Path on Google Cloud: ${filepath}`
+      );
 
-    await recordEmailEvent(`Download was successful: Email sent to ${receiversEmail}`);
+      await recordEmailEvent(
+        `Download was successful: Email sent to ${receiversEmail}`
+      );
+    }
   } catch (error) {
     console.error("Error:", error);
     const eventData = JSON.parse(event.Records[0].Sns.Message);
@@ -107,7 +117,9 @@ exports.handler = async function handler(event) {
       `Error occurred: ${error.message}`
     );
 
-    await recordEmailEvent(`Download was failed: Email sent to ${receiversEmail}`);
+    await recordEmailEvent(
+      `Download was failed: Email sent to ${receiversEmail}`
+    );
   }
 };
 
