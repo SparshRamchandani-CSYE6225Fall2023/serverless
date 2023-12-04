@@ -23,7 +23,7 @@ async function getSecret() {
     const response = await client.send(
       new GetSecretValueCommand({
         SecretId: secretName,
-        VersionStage: "AWSCURRENT", // VersionStage defaults to AWSCURRENT if unspecified
+        VersionStage: "AWSCURRENT",
       })
     );
 
@@ -39,37 +39,38 @@ console.log("GCS_BUCKET_NAME", process.env.GCS_BUCKET_NAME);
 console.log("DYNAMODB_TABLE_NAME", process.env.DYNAMODB_TABLE_NAME);
 
 exports.handler = async function handler(event) {
-  const s = await getSecret();
-  const secretValue = await JSON.parse(s);
-  console.log("Mailgun API KEY:", secretValue.mailgun_api_key);
-
-  mg = mailgun({
-    apiKey: secretValue.mailgun_api_key,
-    domain: DOMAIN,
-  });
-  const decodedPrivateKey = Buffer.from(
-    process.env.GCP_PRIVATE_KEY,
-    "base64"
-  ).toString("utf-8");
-  const keyFileJson = JSON.parse(decodedPrivateKey);
-  const storage = new Storage({
-    projectId: process.env.GCP_PROJECT_ID,
-    credentials: keyFileJson,
-  });
-
-  console.log("EVENT SNS", event.Records[0].Sns);
-  console.log("EVENT", event);
-  const eventData = JSON.parse(event.Records[0].Sns.Message);
-  const releaseUrl = eventData.submission_url;
-  const receiversEmail = eventData.user_email;
-  // const receiversEmail = "shaikh.alt@northeastern.edu";
-  const assignmentId = eventData.assignment_id;
-  const userId = eventData.user_id;
-  console.log("URL:", releaseUrl);
-  console.log("EMAIL:", receiversEmail);
-  console.log("ASSIGNMENT_ID:", assignmentId);
-  console.log("USER_ID:", userId);
   try {
+    const s = await getSecret();
+    const secretValue = await JSON.parse(s);
+    console.log("Mailgun API KEY:", secretValue.mailgun_api_key);
+
+    mg = mailgun({
+      apiKey: secretValue.mailgun_api_key,
+      domain: DOMAIN,
+    });
+
+    const decodedPrivateKey = Buffer.from(
+      process.env.GCP_PRIVATE_KEY,
+      "base64"
+    ).toString("utf-8");
+    const keyFileJson = JSON.parse(decodedPrivateKey);
+    const storage = new Storage({
+      projectId: process.env.GCP_PROJECT_ID,
+      credentials: keyFileJson,
+    });
+
+    console.log("EVENT SNS", event.Records[0].Sns);
+    console.log("EVENT", event);
+    const eventData = JSON.parse(event.Records[0].Sns.Message);
+    const releaseUrl = eventData.submission_url;
+    const receiversEmail = eventData.user_email;
+    const assignmentId = eventData.assignment_id;
+    const userId = eventData.user_id;
+    console.log("URL:", releaseUrl);
+    console.log("EMAIL:", receiversEmail);
+    console.log("ASSIGNMENT_ID:", assignmentId);
+    console.log("USER_ID:", userId);
+
     const response = await fetch(releaseUrl);
     if (!response.ok)
       throw new Error(`Failed to download Submission : ${response.statusText}`);
@@ -81,29 +82,31 @@ exports.handler = async function handler(event) {
     await storage.bucket(bucketName).file(fileName).save(releaseData);
 
     const options = {
-      version: "v4", // Specify the signed URL version
-      action: "read", // Specify the action (read, write, delete, etc.)
-      expires: Date.now() + 30 * 60 * 1000, // URL expiration time (30 minutes from now)
+      version: "v4",
+      action: "read",
+      expires: Date.now() + 30 * 60 * 1000,
     };
-    
+
     const bucketURL = await generateBucket(fileName, options, storage);
     console.log("BUCKET URL", bucketURL);
 
     await sendEmail(
       receiversEmail,
       "Download successful",
-      `The release was successfully downloaded and uploaded to ${bucketName} \n File Path on Google Cloud: ${filepath} 
-      `
-      // \n Signed URL: ${bucketURL}
+      `The release was successfully downloaded and uploaded to ${bucketName} \n File Path on Google Cloud: ${filepath}`
     );
-    await recordEmailEvent(`Download was successfull: Email sent to ${receiversEmail}`);
+
+    await recordEmailEvent(`Download was successful: Email sent to ${receiversEmail}`);
   } catch (error) {
     console.error("Error:", error);
+    const eventData = JSON.parse(event.Records[0].Sns.Message);
+    const receiversEmail = eventData.user_email;
     await sendEmail(
       receiversEmail,
       "Download failed",
       `Error occurred: ${error.message}`
     );
+
     await recordEmailEvent(`Download was failed: Email sent to ${receiversEmail}`);
   }
 };
@@ -115,7 +118,7 @@ async function sendEmail(to, subject, message) {
     subject: subject,
     text: message,
   };
-  mg.messages().send(data);
+  await mg.messages().send(data);
 }
 
 async function recordEmailEvent(status) {
@@ -128,7 +131,12 @@ async function recordEmailEvent(status) {
     },
   };
 
-  dynamoDB.put(params).promise();
+  try {
+    await dynamoDB.put(params).promise();
+  } catch (error) {
+    console.error("Error recording email event:", error);
+    // Handle the error accordingly
+  }
 }
 
 async function generateBucket(filename, options, storage) {
@@ -147,4 +155,3 @@ async function generateBucket(filename, options, storage) {
       });
   });
 }
-
