@@ -38,5 +38,4 @@ This Lambda function automates downloading GitHub releases, storing them in Goog
 - CloudWatch Logs: Monitor function execution details and troubleshoot any issues.
 - DynamoDB Table: Track email delivery status and identify any potential failures.
 - Feedback: Feel free to raise issues or suggest improvements for further development.
-
-
+- 
